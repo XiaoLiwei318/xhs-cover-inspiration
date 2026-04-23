@@ -418,7 +418,7 @@ function cardHTML(item, idx, page) {
       <div class="card-rank ${rkClass}">${item.rank}</div>
       <div class="card-actions">
         <div class="card-fav-btn${faved?' active':''}" onclick="event.stopPropagation();toggleFavCard(event,${idx},'${page}')" title="收藏"><svg width="13" height="13" viewBox="0 0 24 24" fill="${faved?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-        <div class="card-copy-btn" onclick="event.stopPropagation();copyLink(event,${JSON.stringify(item.link||'')})" title="复制链接"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+        <div class="card-copy-btn" onclick="event.stopPropagation();copyImage(event,${JSON.stringify(item.cover||'')})" title="复制封面图"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>
       </div>
       <div class="card-bottom-tag"><span class="card-tag-text">#${item.category}${item.dataDate && item.dataDate !== latestDate ? ' · '+item.dataDate : ''}</span></div>
     </div>
@@ -508,25 +508,42 @@ function updateFavCount() {
   document.getElementById('fav-count').textContent = favorites.length;
 }
 
-// ── 复制链接 ──
-function copyLink(e, url) {
+// ── 复制封面图到剪贴板 ──
+async function copyImage(e, src) {
   e.stopPropagation();
-  const link = url || window.location.href;
-  navigator.clipboard.writeText(link).then(() => {
-    const btn = e.currentTarget;
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    btn.style.color = '#4ade80';
-    btn.style.borderColor = '#4ade80';
-    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1500);
-  }).catch(() => {
-    // fallback
-    const ta = document.createElement('textarea');
-    ta.value = link; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    const btn = e.currentTarget;
-    btn.textContent = '✓'; setTimeout(() => { btn.textContent = '⎘'; }, 1500);
-  });
+  const btn = e.currentTarget;
+  const origHTML = btn.innerHTML;
+
+  const showFeedback = (ok) => {
+    btn.innerHTML = ok
+      ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="pointer-events:none"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" style="pointer-events:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    setTimeout(() => { btn.innerHTML = origHTML; }, 1800);
+  };
+
+  try {
+    // 用 canvas 把图片转成 blob
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((res, rej) => {
+      img.onload = res; img.onerror = rej;
+      img.src = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    showFeedback(true);
+  } catch(err) {
+    // 降级：复制图片 URL
+    try {
+      await navigator.clipboard.writeText(src);
+      showFeedback(true);
+    } catch {
+      showFeedback(false);
+    }
+  }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
