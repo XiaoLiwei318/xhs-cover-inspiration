@@ -98,18 +98,20 @@
     .card.favorited { border-color: rgba(236,72,153,0.45); }
 
     .card-img-wrap { position: relative; overflow: hidden; }
-    .card-img-wrap img { width: 100%; display: block; aspect-ratio: 3/4; object-fit: cover; transition: transform 0.3s; }
-    .card:hover .card-img-wrap img { transform: scale(1.04); }
+    .card-img-wrap img { width: 100%; display: block; aspect-ratio: 3/4; object-fit: cover; }
 
     .card-rank { position: absolute; top: 10px; left: 10px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); border: 1.5px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; z-index: 2; }
     .card-rank.top1 { background: linear-gradient(135deg,#f59e0b,#ef4444); border-color: #f59e0b; }
     .card-rank.top2 { background: linear-gradient(135deg,#94a3b8,#64748b); border-color: #94a3b8; }
     .card-rank.top3 { background: linear-gradient(135deg,#b45309,#92400e); border-color: #b45309; }
 
-    .card-fav-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.15s; opacity: 0; z-index: 2; color: #fff; }
-    .card:hover .card-fav-btn { opacity: 1; }
-    .card.favorited .card-fav-btn { opacity: 1; color: var(--pink); border-color: var(--pink); background: rgba(236,72,153,0.2); }
-    .card-fav-btn:hover { background: rgba(236,72,153,0.35) !important; border-color: var(--pink) !important; color: var(--pink) !important; opacity: 1 !important; }
+    .card-actions { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; opacity: 0; z-index: 2; transition: opacity 0.15s; }
+    .card:hover .card-actions { opacity: 1; }
+    .card.favorited .card-actions { opacity: 1; }
+    .card-fav-btn, .card-copy-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s; color: #fff; }
+    .card.favorited .card-fav-btn { color: var(--pink); border-color: var(--pink); background: rgba(236,72,153,0.2); }
+    .card-fav-btn:hover { background: rgba(236,72,153,0.35) !important; border-color: var(--pink) !important; color: var(--pink) !important; }
+    .card-copy-btn:hover { background: rgba(124,58,237,0.35) !important; border-color: var(--purple-light) !important; color: var(--purple-light) !important; }
 
     .card-bottom-tag { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 10px 8px; background: linear-gradient(transparent, rgba(0,0,0,0.65)); pointer-events: none; z-index: 1; }
     .card-tag-text { font-size: 10px; color: rgba(255,255,255,0.75); }
@@ -171,21 +173,6 @@
   <div class="sidebar-item" data-nav="favorites" id="nav-favorites"><span class="icon">♥</span>我的收藏<span class="badge" id="fav-count">0</span></div>
   <div class="sidebar-item" data-nav="history" id="nav-history"><span class="icon">📅</span>历史日期</div>
 
-  <div class="sidebar-divider"></div>
-
-  <div class="sidebar-label">风格筛选</div>
-  <div class="filter-section">
-    <div class="style-tags" id="style-filters">
-      <div class="style-tag" data-style="穿搭">穿搭</div>
-      <div class="style-tag" data-style="美食">美食</div>
-      <div class="style-tag" data-style="彩妆">彩妆</div>
-      <div class="style-tag" data-style="旅行">旅行</div>
-      <div class="style-tag" data-style="情感">情感</div>
-      <div class="style-tag" data-style="职场">职场</div>
-      <div class="style-tag" data-style="家居">家居</div>
-      <div class="style-tag" data-style="健身">健身</div>
-    </div>
-  </div>
 </aside>
 
 <!-- 主区域 -->
@@ -338,15 +325,6 @@ function init() {
     document.getElementById('nav-'+nav).onclick = () => setNav(nav);
   });
 
-  // 风格筛选
-  document.querySelectorAll('.style-tag').forEach(el => {
-    el.onclick = () => {
-      el.classList.toggle('active');
-      selectedStyles.has(el.dataset.style) ? selectedStyles.delete(el.dataset.style) : selectedStyles.add(el.dataset.style);
-      renderBrowse();
-    };
-  });
-
   document.getElementById('search-input').oninput = e => { searchQuery = e.target.value; renderBrowse(); };
 
   // 历史日期 Tab
@@ -436,7 +414,10 @@ function cardHTML(item, idx, page) {
     <div class="card-img-wrap">
       <img src="${src}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 400%22><rect fill=%22%231a1a35%22 width=%22300%22 height=%22400%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 fill=%22%23444%22 font-size=%2212%22 font-family=%22sans-serif%22>暂无图片</text></svg>'">
       <div class="card-rank ${rkClass}">${item.rank}</div>
-      <div class="card-fav-btn${faved?' active':''}" onclick="toggleFavCard(event,${idx},'${page}')">${faved?'♥':'♡'}</div>
+      <div class="card-actions">
+        <div class="card-fav-btn${faved?' active':''}" onclick="toggleFavCard(event,${idx},'${page}')" title="收藏">${faved?'♥':'♡'}</div>
+        <div class="card-copy-btn" onclick="copyLink(event,${JSON.stringify(item.link||'')})" title="复制链接">⎘</div>
+      </div>
       <div class="card-bottom-tag"><span class="card-tag-text">#${item.category}${item.dataDate && item.dataDate !== latestDate ? ' · '+item.dataDate : ''}</span></div>
     </div>
     <div class="card-body">
@@ -523,6 +504,27 @@ function refreshCurrentPage() {
 }
 function updateFavCount() {
   document.getElementById('fav-count').textContent = favorites.length;
+}
+
+// ── 复制链接 ──
+function copyLink(e, url) {
+  e.stopPropagation();
+  const link = url || window.location.href;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = e.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.style.color = '#4ade80';
+    btn.style.borderColor = '#4ade80';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1500);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    const btn = e.currentTarget;
+    btn.textContent = '✓'; setTimeout(() => { btn.textContent = '⎘'; }, 1500);
+  });
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
