@@ -329,6 +329,33 @@ function init() {
 
   document.getElementById('search-input').oninput = e => { searchQuery = e.target.value; renderBrowse(); };
 
+  // 事件委托：统一处理卡片点击
+  document.body.addEventListener('click', function(e) {
+    // 下载按钮
+    const copyBtn = e.target.closest('[data-action="copy"]');
+    if (copyBtn) {
+      e.stopPropagation(); e.preventDefault();
+      downloadImage(copyBtn, copyBtn.dataset.src);
+      return;
+    }
+    // 收藏按钮
+    const favBtn = e.target.closest('[data-action="fav"]');
+    if (favBtn) {
+      e.stopPropagation(); e.preventDefault();
+      const idx = parseInt(favBtn.dataset.idx);
+      const page = favBtn.dataset.page;
+      const items = getItemsForPage(page);
+      doToggleFav(items[idx]);
+      refreshCurrentPage();
+      return;
+    }
+    // 卡片主体
+    const card = e.target.closest('.card[data-idx]');
+    if (card) {
+      openModal(parseInt(card.dataset.idx), card.dataset.page);
+    }
+  });
+
   // 历史日期 Tab
   renderHistoryTabs();
 
@@ -412,13 +439,13 @@ function cardHTML(item, idx, page) {
   const rkClass = item.rank === 1 ? 'top1' : item.rank === 2 ? 'top2' : item.rank === 3 ? 'top3' : '';
   const src = item.cover || '';
   return `
-  <div class="card${faved?' favorited':''}" onclick="openModal(${idx},'${page}')">
+  <div class="card${faved?' favorited':''}" data-idx="${idx}" data-page="${page}">
     <div class="card-img-wrap">
       <img src="${src}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 400%22><rect fill=%22%231a1a35%22 width=%22300%22 height=%22400%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 fill=%22%23444%22 font-size=%2212%22 font-family=%22sans-serif%22>暂无图片</text></svg>'">
       <div class="card-rank ${rkClass}">${item.rank}</div>
       <div class="card-actions">
-        <div class="card-fav-btn${faved?' active':''}" onclick="event.stopPropagation();toggleFavCard(event,${idx},'${page}')" title="收藏"><svg width="13" height="13" viewBox="0 0 24 24" fill="${faved?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-        <div class="card-copy-btn" onclick="event.stopPropagation();copyImage(event,${JSON.stringify(item.cover||'')})" title="复制封面图"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>
+        <div class="card-fav-btn${faved?' active':''}" data-action="fav" data-idx="${idx}" data-page="${page}" title="收藏"><svg width="13" height="13" viewBox="0 0 24 24" fill="${faved?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+        <div class="card-copy-btn" data-action="copy" data-src="${item.cover||''}" title="下载封面图"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
       </div>
       <div class="card-bottom-tag"><span class="card-tag-text">#${item.category}${item.dataDate && item.dataDate !== latestDate ? ' · '+item.dataDate : ''}</span></div>
     </div>
@@ -508,42 +535,32 @@ function updateFavCount() {
   document.getElementById('fav-count').textContent = favorites.length;
 }
 
-// ── 复制封面图到剪贴板 ──
-async function copyImage(e, src) {
-  e.stopPropagation();
-  const btn = e.currentTarget;
+// ── 下载封面图 ──
+function downloadImage(btn, src) {
   const origHTML = btn.innerHTML;
-
-  const showFeedback = (ok) => {
-    btn.innerHTML = ok
-      ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="pointer-events:none"><polyline points="20 6 9 17 4 12"/></svg>'
-      : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" style="pointer-events:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    setTimeout(() => { btn.innerHTML = origHTML; }, 1800);
-  };
-
-  try {
-    // 用 canvas 把图片转成 blob
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    await new Promise((res, rej) => {
-      img.onload = res; img.onerror = rej;
-      img.src = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+  const ok = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="pointer-events:none"><polyline points="20 6 9 17 4 12"/></svg>';
+  
+  // 用 fetch 下载图片 blob，绕过跨域问题
+  fetch(src)
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'xhs-cover-' + Date.now() + '.jpg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      btn.innerHTML = ok;
+      setTimeout(() => { btn.innerHTML = origHTML; }, 1800);
+    })
+    .catch(() => {
+      // 降级：直接打开图片新标签页
+      window.open(src, '_blank');
+      btn.innerHTML = ok;
+      setTimeout(() => { btn.innerHTML = origHTML; }, 1800);
     });
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-    showFeedback(true);
-  } catch(err) {
-    // 降级：复制图片 URL
-    try {
-      await navigator.clipboard.writeText(src);
-      showFeedback(true);
-    } catch {
-      showFeedback(false);
-    }
-  }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
