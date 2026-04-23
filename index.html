@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小红书封面灵感库</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0d0d1a; --bg2: #13132a; --bg3: #1a1a35;
+      --border: rgba(255,255,255,0.07);
+      --purple: #7c3aed; --purple-light: #a78bfa; --pink: #ec4899;
+      --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+      --glow: rgba(124,58,237,0.3); --card-bg: #16162e;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, 'PingFang SC', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── 侧栏 ── */
+    .sidebar { width: 200px; min-width: 200px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; overflow-y: auto; padding: 20px 0; flex-shrink: 0; }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+    .logo { display: flex; align-items: center; gap: 8px; padding: 0 16px 20px; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--purple), var(--pink)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .logo-text { font-size: 14px; font-weight: 700; }
+
+    .sidebar-label { font-size: 11px; color: var(--text3); padding: 8px 16px 4px; font-weight: 600; letter-spacing: 0.04em; }
+    .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.15s; position: relative; }
+    .sidebar-item:hover { background: rgba(124,58,237,0.1); color: var(--text); }
+    .sidebar-item.active { background: rgba(124,58,237,0.15); color: var(--purple-light); }
+    .sidebar-item.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: linear-gradient(var(--purple), var(--pink)); border-radius: 0 2px 2px 0; }
+    .sidebar-item .icon { font-size: 15px; width: 18px; text-align: center; }
+    .sidebar-item .badge { margin-left: auto; background: var(--purple); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; min-width: 20px; text-align: center; }
+
+    .sidebar-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+    /* 日期列表 */
+    .date-list { padding: 0 8px; }
+    .date-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; color: var(--text3); transition: all 0.15s; margin-bottom: 2px; }
+    .date-item:hover { background: rgba(255,255,255,0.05); color: var(--text2); }
+    .date-item.active { background: rgba(124,58,237,0.15); color: var(--purple-light); }
+    .date-item .date-tag { font-size: 10px; background: rgba(124,58,237,0.2); color: var(--purple-light); padding: 1px 5px; border-radius: 4px; }
+
+    /* 风格/颜色筛选 */
+    .filter-section { padding: 0 16px; }
+    .style-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .style-tag { padding: 3px 9px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); color: var(--text3); transition: all 0.15s; }
+    .style-tag:hover { border-color: var(--purple-light); color: var(--purple-light); }
+    .style-tag.active { background: rgba(124,58,237,0.2); border-color: var(--purple); color: var(--purple-light); }
+
+    /* ── 主区域 ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .topbar { height: 54px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
+    .search-box { flex: 1; max-width: 360px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+    .search-box input { background: none; border: none; outline: none; color: var(--text); font-size: 13px; width: 100%; padding: 8px 0; }
+    .search-box input::placeholder { color: var(--text3); }
+
+    .tabs-bar { display: flex; align-items: center; gap: 4px; padding: 0 20px; height: 48px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; }
+    .tabs-bar::-webkit-scrollbar { height: 3px; }
+    .tabs-bar::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 2px; }
+    .tab-btn { padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; transition: all 0.15s; color: var(--text3); background: none; }
+    .tab-btn:hover { color: var(--text); border-color: var(--border); }
+    .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; box-shadow: 0 0 16px var(--glow); }
+
+    .content-area { flex: 1; overflow-y: auto; padding: 20px; }
+    .content-area::-webkit-scrollbar { width: 6px; }
+    .content-area::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+    /* ── 页面切换 ── */
+    .page { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .page.active { display: flex; }
+
+    /* 收藏/历史 页面头 */
+    .page-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; background: var(--bg2); }
+    .page-title { font-size: 17px; font-weight: 600; }
+    .page-subtitle { font-size: 12px; color: var(--text3); margin-left: auto; }
+
+    .page-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .page-body::-webkit-scrollbar { width: 6px; }
+    .page-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+    /* ── 日期历史页 ── */
+    .history-tabs { display: flex; gap: 8px; padding: 0 24px 16px; flex-wrap: wrap; }
+    .history-tab { padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); color: var(--text3); transition: all 0.15s; }
+    .history-tab:hover { border-color: var(--purple-light); color: var(--text); }
+    .history-tab.active { background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; border-color: transparent; }
+    .history-date-label { font-size: 12px; color: var(--text3); margin-bottom: 12px; padding: 0 4px; }
+
+    /* ── 网格 ── */
+    .grid { columns: 4; column-gap: 14px; }
+    @media (max-width: 1400px) { .grid { columns: 3; } }
+    @media (max-width: 1100px) { .grid { columns: 2; } }
+
+    /* ── 卡片 ── */
+    .card { break-inside: avoid; margin-bottom: 14px; background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; position: relative; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.5); border-color: rgba(124,58,237,0.35); }
+    .card.favorited { border-color: rgba(236,72,153,0.45); }
+
+    .card-img-wrap { position: relative; overflow: hidden; }
+    .card-img-wrap img { width: 100%; display: block; aspect-ratio: 3/4; object-fit: cover; transition: transform 0.3s; }
+    .card:hover .card-img-wrap img { transform: scale(1.04); }
+
+    .card-rank { position: absolute; top: 10px; left: 10px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); border: 1.5px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; z-index: 2; }
+    .card-rank.top1 { background: linear-gradient(135deg,#f59e0b,#ef4444); border-color: #f59e0b; }
+    .card-rank.top2 { background: linear-gradient(135deg,#94a3b8,#64748b); border-color: #94a3b8; }
+    .card-rank.top3 { background: linear-gradient(135deg,#b45309,#92400e); border-color: #b45309; }
+
+    .card-fav-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.15s; opacity: 0; z-index: 2; color: #fff; }
+    .card:hover .card-fav-btn { opacity: 1; }
+    .card.favorited .card-fav-btn { opacity: 1; color: var(--pink); border-color: var(--pink); background: rgba(236,72,153,0.2); }
+    .card-fav-btn:hover { background: rgba(236,72,153,0.35) !important; border-color: var(--pink) !important; color: var(--pink) !important; opacity: 1 !important; }
+
+    .card-bottom-tag { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 10px 8px; background: linear-gradient(transparent, rgba(0,0,0,0.65)); pointer-events: none; z-index: 1; }
+    .card-tag-text { font-size: 10px; color: rgba(255,255,255,0.75); }
+
+    .card-body { padding: 10px 12px 12px; }
+    .card-title { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-meta { display: flex; align-items: center; justify-content: space-between; }
+    .card-author-name { font-size: 11px; color: var(--text3); }
+    .card-likes { font-size: 11px; color: var(--text3); }
+
+    /* ── 弹窗 ── */
+    .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.7); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal-card { background: var(--bg2); border-radius: 16px; border: 1px solid var(--border); display: flex; overflow: hidden; max-width: 800px; width: 100%; max-height: 88vh; box-shadow: 0 32px 80px rgba(0,0,0,0.6); position: relative; }
+    .modal-img-side { width: 340px; min-width: 340px; flex-shrink: 0; background: #000; position: relative; }
+    .modal-img-side img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff; cursor: pointer; z-index: 10; transition: background 0.15s; }
+    .modal-close:hover { background: rgba(255,255,255,0.15); }
+    .modal-info-side { flex: 1; padding: 28px; display: flex; flex-direction: column; overflow-y: auto; min-width: 0; }
+    .modal-info-side::-webkit-scrollbar { width: 4px; }
+    .modal-info-side::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+    .modal-cat-tag { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.35); color: var(--purple-light); font-size: 12px; margin-bottom: 14px; width: fit-content; }
+    .modal-title { font-size: 17px; font-weight: 600; line-height: 1.5; margin-bottom: 8px; }
+    .modal-author { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+    .modal-divider { height: 1px; background: var(--border); margin-bottom: 18px; }
+    .modal-stats { display: flex; gap: 28px; margin-bottom: 20px; }
+    .modal-stat-val { font-size: 22px; font-weight: 700; }
+    .modal-stat-label { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .modal-meta-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .modal-meta-row:last-child { border-bottom: none; }
+    .modal-meta-label { font-size: 13px; color: var(--text3); }
+    .modal-meta-val { font-size: 13px; color: var(--text2); font-weight: 500; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-fav { flex: 1; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; }
+    .btn-fav:hover { border-color: var(--pink); color: var(--pink); }
+    .btn-fav.active { background: rgba(236,72,153,0.12); border-color: var(--pink); color: var(--pink); }
+    .btn-primary { flex: 1; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; border: none; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.15s; }
+    .btn-primary:hover { opacity: 0.88; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+    .empty-state .e-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state .e-sub { font-size: 12px; margin-top: 6px; color: var(--text3); }
+
+    /* 日期badge */
+    .day-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 11px; background: rgba(124,58,237,0.1); color: var(--purple-light); border: 1px solid rgba(124,58,237,0.2); }
+  </style>
+</head>
+<body>
+
+<!-- 侧栏 -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🌸</div>
+    <div class="logo-text">封面灵感库</div>
+  </div>
+
+  <div class="sidebar-label">浏览</div>
+  <div class="sidebar-item active" data-nav="browse" id="nav-browse"><span class="icon">✦</span>全部灵感</div>
+  <div class="sidebar-item" data-nav="favorites" id="nav-favorites"><span class="icon">♥</span>我的收藏<span class="badge" id="fav-count">0</span></div>
+  <div class="sidebar-item" data-nav="history" id="nav-history"><span class="icon">📅</span>历史日期</div>
+
+  <div class="sidebar-divider"></div>
+
+  <div class="sidebar-label">风格筛选</div>
+  <div class="filter-section">
+    <div class="style-tags" id="style-filters">
+      <div class="style-tag" data-style="穿搭">穿搭</div>
+      <div class="style-tag" data-style="美食">美食</div>
+      <div class="style-tag" data-style="彩妆">彩妆</div>
+      <div class="style-tag" data-style="旅行">旅行</div>
+      <div class="style-tag" data-style="情感">情感</div>
+      <div class="style-tag" data-style="职场">职场</div>
+      <div class="style-tag" data-style="家居">家居</div>
+      <div class="style-tag" data-style="健身">健身</div>
+    </div>
+  </div>
+</aside>
+
+<!-- 主区域 -->
+<div class="main">
+
+  <!-- ① 浏览页 -->
+  <div class="page active" id="page-browse" style="flex-direction:column;">
+    <div class="topbar">
+      <div class="search-box">
+        <span style="color:var(--text3);font-size:14px">🔍</span>
+        <input type="text" placeholder="搜索封面、作者..." id="search-input">
+      </div>
+      <span class="day-badge" id="today-badge">📅 今日</span>
+    </div>
+    <div class="tabs-bar" id="tabs-bar">
+      <button class="tab-btn active" data-cat="全部">全部</button>
+    </div>
+    <div class="content-area">
+      <div class="grid" id="browse-grid"></div>
+    </div>
+  </div>
+
+  <!-- ② 收藏页 -->
+  <div class="page" id="page-favorites" style="flex-direction:column;">
+    <div class="page-header">
+      <span style="font-size:18px">♥</span>
+      <div class="page-title">我的收藏</div>
+      <div class="page-subtitle" id="fav-subtitle">共 0 张 · 永久保存</div>
+    </div>
+    <div class="page-body">
+      <div class="grid" id="fav-grid"></div>
+    </div>
+  </div>
+
+  <!-- ③ 历史日期页 -->
+  <div class="page" id="page-history" style="flex-direction:column;">
+    <div class="page-header">
+      <span style="font-size:18px">📅</span>
+      <div class="page-title">历史封面</div>
+      <div class="page-subtitle">最近 7 天</div>
+    </div>
+    <!-- 日期 Tab -->
+    <div class="history-tabs" id="history-tabs" style="padding:16px 24px 0;"></div>
+    <div class="page-body">
+      <div class="history-date-label" id="history-date-label"></div>
+      <div class="grid" id="history-grid"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+  <div class="modal-card" id="modal-card">
+    <div class="modal-img-side">
+      <img id="modal-img" src="" alt="">
+    </div>
+    <div class="modal-close" onclick="closeModal()">✕</div>
+    <div class="modal-info-side">
+      <div class="modal-cat-tag" id="modal-cat">--</div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-author" id="modal-author"></div>
+      <div class="modal-divider"></div>
+      <div class="modal-stats">
+        <div class="modal-stat">
+          <div class="modal-stat-val" id="modal-likes-val">--</div>
+          <div class="modal-stat-label">❤️ 点赞</div>
+        </div>
+        <div class="modal-stat">
+          <div class="modal-stat-val" id="modal-rank-val">--</div>
+          <div class="modal-stat-label">🏆 排名</div>
+        </div>
+      </div>
+      <div>
+        <div class="modal-meta-row">
+          <span class="modal-meta-label">📅 数据日期</span>
+          <span class="modal-meta-val" id="modal-date"></span>
+        </div>
+        <div class="modal-meta-row">
+          <span class="modal-meta-label">🏷 行业类目</span>
+          <span class="modal-meta-val" id="modal-cat2"></span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-fav" id="modal-fav-btn" onclick="toggleFavFromModal()">♡ 收藏</button>
+        <button class="btn-primary" onclick="openOriginal()">查看原帖 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 内嵌所有日期数据 -->
+<script>
+// ALL_DATA 由构建脚本注入，格式:
+// { "2026-04-23": { date, categories:{} }, "2026-04-22": {...}, ... }
+// 最多7天，img 已 base64 内嵌
+</script>
+<script src="data.js"></script>
+<script>
+
+// ── 数据层 ──
+// ALL_DATA 由打包脚本内嵌；如无则用单日 COVER_DATA 兼容
+let ALL_DATA = (typeof EMBEDDED_ALL_DATA !== 'undefined') ? EMBEDDED_ALL_DATA : {};
+if (typeof COVER_DATA !== 'undefined' && COVER_DATA.date) {
+  ALL_DATA[COVER_DATA.date] = COVER_DATA;
+}
+
+const dates = Object.keys(ALL_DATA).sort((a,b) => b.localeCompare(a)); // 降序
+const latestDate = dates[0] || '';
+let currentDate = latestDate;
+
+// 当前浏览页数据
+let browseData = ALL_DATA[currentDate] || { date: currentDate, categories: {} };
+let allItems = buildItems(browseData);
+
+// 状态
+let favorites = JSON.parse(localStorage.getItem('xhs_covers_fav_v2') || '[]');
+let activeTab = '全部';
+let selectedStyles = new Set();
+let searchQuery = '';
+let currentItem = null;
+let currentNav = 'browse';
+let historyDate = latestDate;
+
+function buildItems(data) {
+  const items = [];
+  Object.keys(data.categories || {}).forEach(cat => {
+    (data.categories[cat] || []).forEach(item => items.push({ ...item, category: cat, dataDate: data.date }));
+  });
+  return items;
+}
+
+// ── 初始化 ──
+function init() {
+  // Today badge
+  document.getElementById('today-badge').textContent = '📅 ' + (latestDate || '今日');
+
+  // 构建 Tab（基于最新日期数据）
+  const bar = document.getElementById('tabs-bar');
+  const cats = Object.keys(browseData.categories || {});
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn'; btn.dataset.cat = cat; btn.textContent = cat;
+    btn.onclick = () => switchTab(cat);
+    bar.appendChild(btn);
+  });
+
+  // 侧栏导航
+  ['browse','favorites','history'].forEach(nav => {
+    document.getElementById('nav-'+nav).onclick = () => setNav(nav);
+  });
+
+  // 风格筛选
+  document.querySelectorAll('.style-tag').forEach(el => {
+    el.onclick = () => {
+      el.classList.toggle('active');
+      selectedStyles.has(el.dataset.style) ? selectedStyles.delete(el.dataset.style) : selectedStyles.add(el.dataset.style);
+      renderBrowse();
+    };
+  });
+
+  document.getElementById('search-input').oninput = e => { searchQuery = e.target.value; renderBrowse(); };
+
+  // 历史日期 Tab
+  renderHistoryTabs();
+
+  updateFavCount();
+  renderBrowse();
+}
+
+function setNav(nav) {
+  currentNav = nav;
+  document.querySelectorAll('.sidebar-item[data-nav]').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-'+nav).classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+nav).classList.add('active');
+
+  if (nav === 'favorites') renderFavPage();
+  if (nav === 'history') renderHistory(historyDate);
+}
+
+function switchTab(cat) {
+  activeTab = (activeTab === cat) ? '全部' : cat;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === activeTab));
+  renderBrowse();
+}
+
+// ── 渲染浏览页 ──
+function getFiltered() {
+  let items = [...allItems];
+  if (activeTab !== '全部') items = items.filter(i => i.category === activeTab);
+  if (searchQuery) { const q = searchQuery.toLowerCase(); items = items.filter(i => (i.title||'').toLowerCase().includes(q) || (i.author||'').toLowerCase().includes(q)); }
+  if (selectedStyles.size > 0) items = items.filter(i => selectedStyles.has(i.category));
+  return items;
+}
+
+function renderBrowse() {
+  const items = getFiltered();
+  const grid = document.getElementById('browse-grid');
+  grid.innerHTML = items.length ? items.map((item,i) => cardHTML(item, i, 'browse')).join('') : emptyHTML('🔍','暂无匹配内容');
+}
+
+// ── 渲染收藏页 ──
+function renderFavPage() {
+  document.getElementById('fav-subtitle').textContent = `共 ${favorites.length} 张 · 永久保存`;
+  const grid = document.getElementById('fav-grid');
+  grid.innerHTML = favorites.length
+    ? favorites.map((item,i) => cardHTML(item, i, 'fav')).join('')
+    : emptyHTML('♡','还没有收藏','浏览封面时点击卡片右上角 ♡ 开始收藏');
+}
+
+// ── 历史日期页 ──
+function renderHistoryTabs() {
+  const wrap = document.getElementById('history-tabs');
+  if (!dates.length) { wrap.innerHTML = '<span style="color:var(--text3);font-size:13px">暂无历史数据</span>'; return; }
+  wrap.innerHTML = dates.map(d => `
+    <div class="history-tab${d === historyDate ? ' active':''}" onclick="switchHistoryDate('${d}')">${d}</div>
+  `).join('');
+}
+
+function switchHistoryDate(d) {
+  historyDate = d;
+  renderHistoryTabs();
+  renderHistory(d);
+}
+
+function renderHistory(d) {
+  const data = ALL_DATA[d];
+  const label = document.getElementById('history-date-label');
+  const grid = document.getElementById('history-grid');
+  if (!data) {
+    label.textContent = '';
+    grid.innerHTML = emptyHTML('📅', `${d} 暂无数据`, '每天上午 10:00 自动更新前一天 TOP 封面');
+    return;
+  }
+  const items = buildItems(data);
+  label.textContent = `${d} · 共 ${items.length} 张封面`;
+  grid.innerHTML = items.length ? items.map((item,i) => cardHTML(item, i, 'history')).join('') : emptyHTML('📷','该日期暂无数据');
+}
+
+// ── 卡片 HTML ──
+function cardHTML(item, idx, page) {
+  const faved = isFav(item);
+  const rkClass = item.rank === 1 ? 'top1' : item.rank === 2 ? 'top2' : item.rank === 3 ? 'top3' : '';
+  const src = item.cover || '';
+  return `
+  <div class="card${faved?' favorited':''}" onclick="openModal(${idx},'${page}')">
+    <div class="card-img-wrap">
+      <img src="${src}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 400%22><rect fill=%22%231a1a35%22 width=%22300%22 height=%22400%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 fill=%22%23444%22 font-size=%2212%22 font-family=%22sans-serif%22>暂无图片</text></svg>'">
+      <div class="card-rank ${rkClass}">${item.rank}</div>
+      <div class="card-fav-btn${faved?' active':''}" onclick="toggleFavCard(event,${idx},'${page}')">${faved?'♥':'♡'}</div>
+      <div class="card-bottom-tag"><span class="card-tag-text">#${item.category}${item.dataDate && item.dataDate !== latestDate ? ' · '+item.dataDate : ''}</span></div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">${item.title||''}</div>
+      <div class="card-meta">
+        <span class="card-author-name">@${item.author||''}</span>
+        <span class="card-likes">❤️ ${item.likes||'--'}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function emptyHTML(icon, text, sub='') {
+  return `<div class="empty-state"><div class="e-icon">${icon}</div><div>${text}</div>${sub?`<div class="e-sub">${sub}</div>`:''}</div>`;
+}
+
+// ── 弹窗 ──
+function getItemsForPage(page) {
+  if (page === 'fav') return favorites;
+  if (page === 'history') return buildItems(ALL_DATA[historyDate] || { categories:{} });
+  return getFiltered();
+}
+
+function openModal(idx, page) {
+  const items = getItemsForPage(page);
+  const item = items[idx];
+  if (!item) return;
+  currentItem = item;
+
+  document.getElementById('modal-img').src = item.cover || '';
+  document.getElementById('modal-title').textContent = item.title || '';
+  document.getElementById('modal-author').textContent = '@' + (item.author || '');
+  document.getElementById('modal-likes-val').textContent = item.likes || '--';
+  document.getElementById('modal-rank-val').textContent = 'TOP ' + (item.rank || '--');
+  document.getElementById('modal-date').textContent = item.dataDate || latestDate;
+  document.getElementById('modal-cat').textContent = item.category || '--';
+  document.getElementById('modal-cat2').textContent = item.category || '--';
+
+  const faved = isFav(item);
+  const btn = document.getElementById('modal-fav-btn');
+  btn.textContent = faved ? '♥ 已收藏' : '♡ 收藏';
+  btn.className = 'btn-fav' + (faved ? ' active' : '');
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  currentItem = null;
+}
+function handleOverlayClick(e) { if (e.target.id === 'modal') closeModal(); }
+function openOriginal() { if (currentItem?.link) window.open(currentItem.link,'_blank'); }
+
+// ── 收藏 ──
+function isFav(item) {
+  return favorites.some(f => f.cover === item.cover && f.title === item.title);
+}
+function doToggleFav(item) {
+  const i = favorites.findIndex(f => f.cover === item.cover && f.title === item.title);
+  if (i >= 0) favorites.splice(i, 1);
+  else favorites.unshift({ ...item });
+  localStorage.setItem('xhs_covers_fav_v2', JSON.stringify(favorites));
+  updateFavCount();
+}
+function toggleFavFromModal() {
+  if (!currentItem) return;
+  doToggleFav(currentItem);
+  const faved = isFav(currentItem);
+  const btn = document.getElementById('modal-fav-btn');
+  btn.textContent = faved ? '♥ 已收藏' : '♡ 收藏';
+  btn.className = 'btn-fav' + (faved ? ' active' : '');
+  refreshCurrentPage();
+}
+function toggleFavCard(e, idx, page) {
+  e.stopPropagation();
+  const items = getItemsForPage(page);
+  doToggleFav(items[idx]);
+  refreshCurrentPage();
+}
+function refreshCurrentPage() {
+  if (currentNav === 'browse') renderBrowse();
+  else if (currentNav === 'favorites') renderFavPage();
+  else renderHistory(historyDate);
+}
+function updateFavCount() {
+  document.getElementById('fav-count').textContent = favorites.length;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+init();
+</script>
+</body>
+</html>
